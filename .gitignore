@@ -1,3 +1,4 @@
 *.xdk
 *.xdke
 xdk
+.DS_Store
