@@ -1,8 +1,9 @@
+var mraa = require('mraa');
 var digitalAccelerometer = require('jsupm_mma7660');
 
 // Config
 var readPeriod = 200; // Read the acceleration every 200ms
-var vibrationThreshold = 1.0; // Consider the washing machine to be vibrating if the acceleration value is > 1
+var vibrationThreshold = 1.2; // Consider the washing machine to be vibrating if the acceleration value is > 1
 var batchSize = 10; // Batch readings together in sets of 10
 var maxStillReadingsCount = 5; // After 60 still readings (i.e. 2 mins of still readings) we assume the washing machine has stopped
 var thresholdVibrationReadingsCount = 5; // We require 60 vibration readings (i.e. 2 mins of continuous vibration) before we record the washing machine as started
@@ -13,6 +14,10 @@ var isVibrating = false;
 var stillReadingsCount = 0;
 var vibrationReadingsCount = 0;
 var batchReadings = [];
+
+// LED
+var myOnboardLed = new mraa.Gpio(13); //LED hooked up to digital pin 13 (or built in pin on Intel Galileo Gen2 as well as Intel Edison)
+myOnboardLed.dir(mraa.DIR_OUT); //set the gpio direction to output
 
 var myDigitalAccelerometer = new digitalAccelerometer.MMA7660(
     digitalAccelerometer.MMA7660_I2C_BUS,
@@ -53,6 +58,7 @@ function accelerometer() {
                     isWashing = false;
                     stillReadingsCount = 0;
                     console.log('ALERT! Washing machine has finished!');
+                    myOnboardLed.write(0);
                 }
             }
         } else {
@@ -61,7 +67,8 @@ function accelerometer() {
                 if (vibrationReadingsCount === thresholdVibrationReadingsCount) {
                     isWashing = true;
                     vibrationReadingsCount = 0;
-                    console.log('Washing machine has started!')
+                    console.log('Washing machine has started!');
+                    myOnboardLed.write(1);
                 }
             } else {
                 vibrationReadingsCount = 0;
@@ -93,7 +100,6 @@ periodicActivity();
 
 function periodicActivity()
 {
-    var val = accelerometer();
+    accelerometer();
     setTimeout(periodicActivity, readPeriod);
 }
-
