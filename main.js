@@ -1,6 +1,9 @@
 var digitalAccelerometer = require('jsupm_mma7660');
 
-var vibrationThreshold = 1;
+var readPeriod = 200; // Read the acceleration every 200ms
+var vibrationThreshold = 1.2; // Consider the washing machine to be vibrating if the acceleration value is > 1
+var batchSize = 10; // Batch readings together in sets of 10
+var maxStillReadingsCount = 60; // After 60 still readings (i.e. 2 mins of still readings) we assume the washing machine has stopped
 
 var isWashing = false;
 var isVibrating = false;
@@ -24,12 +27,41 @@ function accelerometer() {
     var x = digitalAccelerometer.floatp_value(ax);
     var y = digitalAccelerometer.floatp_value(ay);
     var z = digitalAccelerometer.floatp_value(az);
-    return {
+    batchReadings.push({
         x: x,
         y: y,
         z: z,
         d: Math.sqrt(x*x + y*y + z*z) // the magnitude of the acceleration
-    };
+    });
+    if (batchReadings.length === batchSize) {
+        var averageReading = 0;
+        batchReadings.forEach(function (r) { averageReading += r.d; });
+        averageReading /= batchSize;
+        console.log(averageReading);
+        isVibrating = averageReading > vibrationThreshold;
+        if (isWashing) {
+            if (isVibrating) {
+                stillReadingsCount = 0;
+                isWashing = true;
+            } else {
+                stillReadingsCount += 1;
+                if (stillReadingsCount === maxStillReadingsCount) {
+                    isWashing = false;
+                    stillReadingsCount = 0;
+                    console.log('ALERT! Washing machine has finished');
+                }
+            }
+        } else if (isVibrating) {
+            isWashing = true;
+        }
+
+        batchReadings = [];
+        console.log({
+            isVibrating: isVibrating,
+            isWashing: isWashing,
+            stillReadingsCount: stillReadingsCount
+        });
+    }
 }
 
 process.on('SIGINT', function () {
@@ -48,7 +80,6 @@ periodicActivity();
 function periodicActivity()
 {
     var val = accelerometer();
-    console.log(val);
-    setTimeout(periodicActivity, 2000); // Log out the acceleration values every 2 seconds
+    setTimeout(periodicActivity, readPeriod);
 }
 
