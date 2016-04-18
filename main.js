@@ -1,5 +1,6 @@
 var mraa = require('mraa');
 var digitalAccelerometer = require('jsupm_mma7660');
+var fs = require('fs');
 
 // Config
 var readPeriod = 50; // Read the acceleration every 50ms
@@ -20,6 +21,20 @@ var n = 0;
 var myOnboardLed = new mraa.Gpio(13); //LED hooked up to digital pin 13 (or built in pin on Intel Galileo Gen2 as well as Intel Edison)
 myOnboardLed.dir(mraa.DIR_OUT); //set the gpio direction to output
 
+// Output
+if (!fs.existsSync('data-output')) {
+    fs.mkdir('data-output');
+}
+if (fs.existsSync('data-output/data.json')) {
+    fs.unlinkSync('data-output/data.json');
+}
+if (fs.existsSync('data-output/data-full.txt')) {
+    fs.unlinkSync('data-output/data-full.txt');
+}
+
+var jsonDataFile = 'data-output/data.json'; // This file holds the json for iteration no., mean and max values. Copy it into the data variable in chart.js to view a graph of the data
+var fullOutputFile = 'data-output/data-full.txt'; // This file holds all of the log output
+
 var myDigitalAccelerometer = new digitalAccelerometer.MMA7660(
     digitalAccelerometer.MMA7660_I2C_BUS,
     digitalAccelerometer.MMA7660_DEFAULT_I2C_ADDR);
@@ -31,6 +46,15 @@ myDigitalAccelerometer.setModeActive();
 var ax = digitalAccelerometer.new_floatp();
 var ay = digitalAccelerometer.new_floatp();
 var az = digitalAccelerometer.new_floatp();
+
+function logOutput (s) {
+    console.log(s);
+    fs.appendFile(fullOutputFile, s + '\n', function (err) { if (err) { console.log(err); }});
+}
+
+function writeJsonData (x) {
+    fs.appendFile(jsonDataFile, JSON.stringify(x) + ',\n', function (err) { if (err) { console.log(err); }});
+}
 
 function accelerometer() {
     myDigitalAccelerometer.getAcceleration(ax, ay, az);
@@ -49,8 +73,9 @@ function accelerometer() {
         batchReadings.forEach(function (r) { averageReading += r.d; if (r.d > maxReading) { maxReading = r.d; } });
         averageReading /= batchSize;
         n++;
-        console.log(n);
-        console.log(averageReading, maxReading);
+        logOutput(n.toString());
+        logOutput(averageReading + ' ' + maxReading);
+        writeJsonData({i: n, mean: averageReading, max: maxReading });
         isVibrating = maxReading > vibrationThreshold;
         if (isWashing) {
             if (isVibrating) {
@@ -61,7 +86,7 @@ function accelerometer() {
                 if (stillReadingsCount === maxStillReadingsCount) {
                     isWashing = false;
                     stillReadingsCount = 0;
-                    console.log('ALERT! Washing machine has finished!');
+                    logOutput('ALERT! Washing machine has finished!');
                     myOnboardLed.write(0);
                 }
             }
@@ -71,7 +96,7 @@ function accelerometer() {
                 if (vibrationReadingsCount === thresholdVibrationReadingsCount) {
                     isWashing = true;
                     vibrationReadingsCount = 0;
-                    console.log('Washing machine has started!');
+                    logOutput('Washing machine has started!');
                     myOnboardLed.write(1);
                 }
             } else {
@@ -80,12 +105,12 @@ function accelerometer() {
         }
 
         batchReadings = [];
-        console.log({
+        logOutput(JSON.stringify({
             isVibrating: isVibrating,
             isWashing: isWashing,
             stillReadingsCount: stillReadingsCount,
             vibrationReadingsCount: vibrationReadingsCount
-        });
+        }));
     }
 }
 
