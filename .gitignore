@@ -2,3 +2,5 @@
 *.xdke
 xdk
 .DS_Store
+node_modules
+/config.js
