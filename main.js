@@ -14,6 +14,7 @@ var isVibrating = false;
 var stillReadingsCount = 0;
 var vibrationReadingsCount = 0;
 var batchReadings = [];
+var n = 0;
 
 // LED
 var myOnboardLed = new mraa.Gpio(13); //LED hooked up to digital pin 13 (or built in pin on Intel Galileo Gen2 as well as Intel Edison)
