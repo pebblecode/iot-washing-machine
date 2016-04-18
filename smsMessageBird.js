@@ -20,7 +20,6 @@ function send() {
     'originator': 'Whistle',
     'recipients': [
       config.mobileNumbers.SW
-      // config.mobileNumbers.EN
     ],
     'body': 'Washing machine finished!'
     // 'body': messageBodies[index]

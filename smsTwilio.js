@@ -9,7 +9,6 @@ function send() {
   client.messages.create({
     body: "Whistle! Washing machine finished!",
     to: config.mobileNumbers.SW,
-    // to: config.mobileNumbers.EN,
     from: "+441727260189"
   }, function(error, message) {
     if (error) {
