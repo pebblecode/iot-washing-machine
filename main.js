@@ -2,11 +2,11 @@ var mraa = require('mraa');
 var digitalAccelerometer = require('jsupm_mma7660');
 
 // Config
-var readPeriod = 200; // Read the acceleration every 200ms
+var readPeriod = 50; // Read the acceleration every 50ms
 var vibrationThreshold = 1.2; // Consider the washing machine to be vibrating if the acceleration value is > 1
-var batchSize = 10; // Batch readings together in sets of 10
-var maxStillReadingsCount = 5; // After 60 still readings (i.e. 2 mins of still readings) we assume the washing machine has stopped
-var thresholdVibrationReadingsCount = 5; // We require 60 vibration readings (i.e. 2 mins of continuous vibration) before we record the washing machine as started
+var batchSize = 40; // Batch readings together in sets of 40
+var maxStillReadingsCount = 180; // After 180 still readings (i.e. 6 mins of still readings) we assume the washing machine has stopped
+var thresholdVibrationReadingsCount = 15; // We require 15 vibration readings (i.e. 30 seconds of continuous vibration) before we record the washing machine as started
 
 // State
 var isWashing = false;
@@ -44,10 +44,13 @@ function accelerometer() {
     });
     if (batchReadings.length === batchSize) {
         var averageReading = 0;
-        batchReadings.forEach(function (r) { averageReading += r.d; });
+        var maxReading = 0;
+        batchReadings.forEach(function (r) { averageReading += r.d; if (r.d > maxReading) { maxReading = r.d; } });
         averageReading /= batchSize;
-        console.log(averageReading);
-        isVibrating = averageReading > vibrationThreshold;
+        n++;
+        console.log(n);
+        console.log(averageReading, maxReading);
+        isVibrating = maxReading > vibrationThreshold;
         if (isWashing) {
             if (isVibrating) {
                 stillReadingsCount = 0;
